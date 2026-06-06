@@ -1,8 +1,6 @@
 # Global-Trade-Conflict-Classification
 Machine learning analysis of conflict onset based on trade network structure and sanction exposure
-# ============================================================
-# STEP 1. 전처리 (Preprocessing)
-# ============================================================
+#전처리
 library(tidyverse)
 library(caret)
 library(corrplot)
@@ -324,11 +322,6 @@ rmse_pc1  <- rmse(test_pc1$y, pred_pc1)
 rmse_full
 rmse_pc1
 
-
-############################################################
-# 패키지 로드
-############################################################
-
 library(caret)
 library(randomForest)
 library(xgboost)
@@ -336,9 +329,7 @@ library(pROC)
 
 
 
-# ============================================================
-# 분류 전처리: conflict_onset 연관성 검정
-# ============================================================
+#분류전처리
 
 # conflict_onset 수치형으로 임시 변환 (검정용)
 trade$conflict_onset_num <- as.numeric(as.character(trade$conflict_onset))
@@ -413,9 +404,8 @@ for (v in cat_vars_cls) {
   )
 }
 
-# ============================================================
+
 # 분류 모델링
-# ============================================================
 library(caret)
 library(smotefamily)
 library(pROC)
@@ -669,9 +659,7 @@ vars <- c(
 sapply(vars, function(v) {
   cor(trade[[v]], conflict_num)
 })
-# ============================================================
 # 회귀 모델링: conflict_risk_score 예측
-# ============================================================
 
 library(randomForest)
 library(xgboost)
@@ -749,9 +737,7 @@ eval_reg <- function(pred, actual, model_name = "") {
 
 reg_results <- list()
 
-# ============================================================
 # 1. Linear Regression
-# ============================================================
 
 lm_model <- lm(
   conflict_risk_score ~ .,
@@ -769,9 +755,7 @@ reg_results[["Linear"]] <- eval_reg(
   "Linear Regression"
 )
 
-# ============================================================
 # 2. Decision Tree Regression
-# ============================================================
 
 tree_reg <- rpart(
   conflict_risk_score ~ .,
@@ -794,9 +778,7 @@ reg_results[["Tree"]] <- eval_reg(
   "Decision Tree"
 )
 
-# ============================================================
 # 3. Random Forest Regression
-# ============================================================
 
 set.seed(42)
 
@@ -824,9 +806,7 @@ varImpPlot(
   main = "RF Variable Importance (Regression)"
 )
 
-# ============================================================
 # 4. XGBoost Regression
-# ============================================================
 
 xgb_train_x <- as.matrix(
   train_scaled[, feature_vars_final]
@@ -864,9 +844,7 @@ reg_results[["XGB"]] <- eval_reg(
 )
 
 
-# ============================================================
 # 성능 비교
-# ============================================================
 
 reg_df <- do.call(rbind, reg_results)
 rownames(reg_df) <- NULL
@@ -874,10 +852,7 @@ rownames(reg_df) <- NULL
 cat("\n=== 회귀 모델 성능 비교 ===\n")
 print(reg_df)
 
-# ============================================================
 # 시각화
-# ============================================================
-
 library(tidyr)
 
 reg_long <- pivot_longer(
@@ -934,16 +909,12 @@ aes(x = Predicted, y = Residuals)) +
   theme_minimal()
 
 
-# =========================
 # SHAP용 XGBoost 다시 학습
-# =========================
 
 library(xgboost)
 library(ggplot2)
 
-# -------------------------
 # matrix 생성
-# -------------------------
 
 xgb_train_x <- as.matrix(
   train_scaled[, feature_vars_final]
@@ -955,10 +926,7 @@ xgb_test_x <- as.matrix(
 
 xgb_train_y <- train_scaled$conflict_risk_score
 
-# -------------------------
 # DMatrix 생성
-# -------------------------
-
 dtrain_reg <- xgb.DMatrix(
   data = xgb_train_x,
   label = xgb_train_y
@@ -968,9 +936,8 @@ dtest_reg <- xgb.DMatrix(
   data = xgb_test_x
 )
 
-# -------------------------
+
 # parameter 설정
-# -------------------------
 
 params_reg <- list(
   objective = "reg:squarederror",
@@ -983,9 +950,7 @@ params_reg <- list(
   colsample_bytree = 0.8
 )
 
-# -------------------------
 # 모델 학습
-# -------------------------
 
 set.seed(42)
 
@@ -995,9 +960,7 @@ xgb_reg2 <- xgb.train(
   nrounds = 100
 )
 
-# =========================
 # SHAP VALUE 계산
-# =========================
 
 shap_matrix <- predict(
   xgb_reg2,
@@ -1011,9 +974,7 @@ shap_matrix <- shap_matrix[, -ncol(shap_matrix)]
 # data frame 변환
 shap_df <- as.data.frame(shap_matrix)
 
-# =========================
 # 평균 SHAP 중요도
-# =========================
 
 mean_shap <- apply(
   abs(shap_df),
@@ -1028,9 +989,7 @@ mean_shap <- sort(
 
 print(mean_shap)
 
-# =========================
 # SHAP 중요도 시각화
-# =========================
 
 shap_importance <- data.frame(
   Variable = names(mean_shap),
@@ -1056,9 +1015,7 @@ ggplot(
     y = "Mean |SHAP value|"
   )
 
-# =========================
 # Dependence Plot
-# =========================
 
 dep_df <- data.frame(
   sanction_exposure_index =
@@ -1083,12 +1040,8 @@ ggplot(
     y = "SHAP value"
   )
 
-
-
-# ============================================================
 # 회귀 모델링 (Original Data 사용 버전)
 # conflict_risk_score 예측
-# ============================================================
 
 library(randomForest)
 library(xgboost)
@@ -1097,9 +1050,7 @@ library(caret)
 library(ggplot2)
 library(Metrics)
 
-# ------------------------------------------------
 # 데이터 준비
-# ------------------------------------------------
 
 df_reg <- trade[, c("conflict_risk_score", feature_vars_final)]
 
@@ -1115,9 +1066,7 @@ reg_idx <- createDataPartition(
 train_reg <- df_reg[reg_idx, ]
 test_reg  <- df_reg[-reg_idx, ]
 
-# ------------------------------------------------
 # 평가 함수
-# ------------------------------------------------
 
 eval_reg <- function(pred, actual, model_name = "") {
   
@@ -1142,9 +1091,7 @@ eval_reg <- function(pred, actual, model_name = "") {
 
 reg_results <- list()
 
-# ============================================================
 # 1. Linear Regression
-# ============================================================
 
 lm_model <- lm(
   conflict_risk_score ~ .,
@@ -1162,9 +1109,7 @@ reg_results[["Linear"]] <- eval_reg(
   "Linear Regression"
 )
 
-# ============================================================
 # 2. Decision Tree Regression
-# ============================================================
 
 tree_reg <- rpart(
   conflict_risk_score ~ .,
@@ -1187,9 +1132,7 @@ reg_results[["Tree"]] <- eval_reg(
   "Decision Tree"
 )
 
-# ============================================================
 # 3. Random Forest Regression
-# ============================================================
 
 set.seed(42)
 
@@ -1217,9 +1160,7 @@ varImpPlot(
   main = "RF Variable Importance (Regression)"
 )
 
-# ============================================================
 # 4. XGBoost Regression
-# ============================================================
 
 xgb_train_x <- as.matrix(
   train_reg[, feature_vars_final]
@@ -1256,19 +1197,14 @@ reg_results[["XGB"]] <- eval_reg(
   "XGBoost"
 )
 
-# ============================================================
 # 성능 비교표
-# ============================================================
-
 reg_df <- do.call(rbind, reg_results)
 rownames(reg_df) <- NULL
 
 cat("\n=== 회귀 모델 성능 비교 ===\n")
 print(reg_df)
 
-# ============================================================
 # 성능 시각화
-# ============================================================
 
 library(tidyr)
 
@@ -1296,9 +1232,7 @@ ggplot(
   ) +
   theme_minimal()
 
-# ============================================================
 # Actual vs Predicted (RF)
-# ============================================================
 
 ggplot(
   data.frame(
@@ -1320,10 +1254,7 @@ ggplot(
     y = "Predicted"
   )
 
-# ============================================================
 # Residual Plot (RF)
-# ============================================================
-
 residuals_rf <- test_reg$conflict_risk_score - rf_pred
 
 ggplot(
@@ -1345,11 +1276,7 @@ ggplot(
     y = "Residuals"
   )
 
-
-
-# ============================================================
 # conflict_onset 분포 확인
-# ============================================================
 
 # 개수 확인
 table(trade$conflict_onset)
@@ -1375,9 +1302,7 @@ conflict_dist$Proportion <- round(
 
 print(conflict_dist)
 
-# ============================================================
 # 시각화
-# ============================================================
 
 library(ggplot2)
 
@@ -1422,9 +1347,7 @@ ggplot(
 library(ggplot2)
 library(gridExtra)
 
-# =====================================================
 # 1. conflict_onset 분포
-# =====================================================
 
 conflict_dist <- as.data.frame(
   table(trade$conflict_onset)
@@ -1478,9 +1401,7 @@ p1 <- ggplot(
   theme_minimal() +
   theme(legend.position = "none")
 
-# =====================================================
 # 2. sanction_exposure_index Boxplot
-# =====================================================
 
 p2 <- ggplot(
   trade,
@@ -1505,9 +1426,7 @@ p2 <- ggplot(
   theme_minimal() +
   theme(legend.position = "none")
 
-# =====================================================
 # 3. network_centrality_score Boxplot
-# =====================================================
 
 p3 <- ggplot(
   trade,
@@ -1532,9 +1451,7 @@ p3 <- ggplot(
   theme_minimal() +
   theme(legend.position = "none")
 
-# =====================================================
 # 한 화면에 출력
-# =====================================================
 
 grid.arrange(
   p1,
